@@ -1,0 +1,6 @@
+{
+  "name": "高情商回话助手",
+  "description": "按场景提供高情商、温和及简洁风格的回话建议，支持上下文多轮对话与自定义场景话术",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
