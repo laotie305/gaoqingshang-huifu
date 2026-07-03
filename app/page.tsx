@@ -45,6 +45,8 @@ const IconMap: Record<string, any> = {
   MessageSquare
 };
 
+
+
 interface ChatTurn {
   id: string;
   partner: string;
@@ -91,7 +93,7 @@ export default function Home() {
   // Session directory state
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"scenarios" | "dialogues">("dialogues");
+  const [activeTab, setActiveTab] = useState<"scenarios" | "dialogues">("scenarios");
   const [mobileChatViewActive, setMobileChatViewActive] = useState(false);
 
   // Settings & UI state
@@ -546,7 +548,9 @@ export default function Home() {
     setErrorMsg(null);
     setIsGenerating(true);
     setSuggestions(null);
-    setActiveTab("dialogues");
+    if (activeTab === "scenarios") {
+      setActiveTab("dialogues");
+    }
     setMobileChatViewActive(true); // Auto-switch to dialogues view on mobile so user sees the progress spinner
 
     try {
@@ -573,6 +577,14 @@ export default function Home() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  // Copy suggestion and adopt reply
+  const handleCopyAndAdopt = (text: string, styleKey: "gentle" | "high_eq" | "concise") => {
+    navigator.clipboard.writeText(text);
+    setCopiedStyle(styleKey);
+    setTimeout(() => setCopiedStyle(null), 2000);
+    handleAdoptReply(styleKey, text);
   };
 
   // Select style response to reply and move to next round
@@ -631,33 +643,22 @@ export default function Home() {
     );
   };
 
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
-        <div className="flex flex-col items-center space-y-4">
-          <RefreshCw className="w-10 h-10 text-zinc-600 animate-spin" />
-          <p className="text-gray-500 text-sm font-medium">正在初始化回话助手...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div id="app-root-container" className={cn("min-h-screen transition-colors duration-300 font-sans", isDarkMode ? "dark bg-[#09090b] text-zinc-100" : "bg-[#fcfcfd] text-zinc-800")}>
+    <div id="app-root-container" className={cn("min-h-screen transition-all duration-500 font-sans pb-12", isDarkMode ? "bg-[#0B132B] text-slate-100" : "bg-[#F5ECD7] text-[#112140]")}>
       
       {/* Header */}
-      <header id="app-header" className="sticky top-0 z-30 border-b border-zinc-200/60 dark:border-zinc-800/50 bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-md">
+      <header id="app-header" className={cn("sticky top-0 z-30 border-b backdrop-blur-md transition-colors duration-300", isDarkMode ? "border-[#ebd29c]/15 bg-[#0B132B]/85" : "border-[#112140]/10 bg-[#F5ECD7]/85")}>
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div id="brand-container" className="flex items-center space-x-3">
-            <div className="p-2 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm">
+            <div className={cn("p-2 rounded-xl border transition-all shadow-md", isDarkMode ? "bg-[#13233F] border-[#ebd29c]/30 text-[#ebd29c]" : "bg-[#FFFBF0] border-[#112140]/20 text-[#112140]")}>
               <Sparkles className="w-5 h-5 animate-pulse" />
             </div>
             <div>
-              <h1 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                高情商场景回话助手
+              <h1 className={cn("text-base sm:text-lg font-black tracking-widest uppercase font-mono", isDarkMode ? "text-[#ebd29c]" : "text-[#112140]")}>
+                AGNES WATCHMAKER
               </h1>
-              <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium hidden sm:block">
-                话术风格匹配 & 社交沟通多轮对话引擎
+              <p className={cn("text-[9px] sm:text-[10px] font-mono tracking-widest uppercase font-semibold opacity-80", isDarkMode ? "text-slate-400" : "text-[#112140]/75")}>
+                Precision EQ Reply Assistant / 匠心高情商场景回话
               </p>
             </div>
           </div>
@@ -667,8 +668,10 @@ export default function Home() {
               id="guide-toggle-btn"
               onClick={() => setShowGuide(!showGuide)}
               className={cn(
-                "p-2 rounded-lg transition-all duration-200",
-                showGuide ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                "p-2 rounded-xl border transition-all duration-200 shadow-sm",
+                showGuide 
+                  ? (isDarkMode ? "bg-[#ebd29c] border-[#ebd29c] text-[#112140] font-bold" : "bg-[#112140] border-[#112140] text-[#ebd29c] font-bold")
+                  : (isDarkMode ? "text-[#ebd29c]/80 border-[#ebd29c]/15 hover:bg-[#13233F]" : "text-[#112140]/80 border-[#112140]/10 hover:bg-[#FFFBF0]")
               )}
               title="使用指南"
             >
@@ -677,10 +680,10 @@ export default function Home() {
             <button
               id="theme-toggle-btn"
               onClick={toggleDarkMode}
-              className="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200"
-              title={isDarkMode ? "浅色模式" : "深色模式"}
+              className={cn("p-2 rounded-xl border transition-all duration-200 shadow-sm", isDarkMode ? "text-[#ebd29c]/80 border-[#ebd29c]/15 hover:bg-[#13233F]" : "text-[#112140]/80 border-[#112140]/10 hover:bg-[#FFFBF0]")}
+              title={isDarkMode ? "浅色奢华沙龙" : "深色皇家海军"}
             >
-              {isDarkMode ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-zinc-700" />}
+              {isDarkMode ? <Sun className="w-5 h-5 text-amber-300" /> : <Moon className="w-5 h-5 text-zinc-700" />}
             </button>
           </div>
         </div>
@@ -690,18 +693,18 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-3 py-4 sm:px-4 sm:py-6">
         
         {/* Module Switcher (Tabs) */}
-        <div className="flex bg-zinc-100/85 dark:bg-zinc-900/40 p-1.5 rounded-2xl mb-6 border border-zinc-200/60 dark:border-zinc-800/60 max-w-md mx-auto">
+        <div className={cn("flex p-1.5 rounded-2xl mb-6 border max-w-md mx-auto transition-all shadow-md gap-1", isDarkMode ? "bg-[#13233F] border-[#ebd29c]/15" : "bg-[#FFFBF0] border-[#112140]/10")}>
           <button
             onClick={() => setActiveTab("scenarios")}
             className={cn(
-              "flex-1 py-2.5 px-4 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2",
+              "flex-1 py-2 px-3 text-xs font-black tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 font-mono uppercase",
               activeTab === "scenarios"
-                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-sm"
-                : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                ? (isDarkMode ? "bg-[#ebd29c] text-[#112140] shadow-md" : "bg-[#112140] text-[#ebd29c] shadow-md")
+                : (isDarkMode ? "text-[#ebd29c]/60 hover:text-[#ebd29c]" : "text-slate-500 hover:text-[#112140]")
             )}
           >
             <Bot className="w-4 h-4" />
-            情商场景与话术库
+            ENGINE / 回话场景库
           </button>
           <button
             onClick={() => {
@@ -709,16 +712,16 @@ export default function Home() {
               setMobileChatViewActive(false);
             }}
             className={cn(
-              "flex-1 py-2.5 px-4 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 relative",
+              "flex-1 py-2 px-3 text-xs font-black tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center gap-1.5 font-mono uppercase relative",
               activeTab === "dialogues"
-                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-sm"
-                : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                ? (isDarkMode ? "bg-[#ebd29c] text-[#112140] shadow-md" : "bg-[#112140] text-[#ebd29c] shadow-md")
+                : (isDarkMode ? "text-[#ebd29c]/60 hover:text-[#ebd29c]" : "text-slate-500 hover:text-[#112140]")
             )}
           >
             <MessageCircle className="w-4 h-4" />
-            多轮智能对话
+            WORKSPACE / 智能回话区
             {sessions.some(s => s.dialogHistory.length > 0) && (
-              <span className="absolute top-2 right-4 w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="absolute top-2 right-4 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
             )}
           </button>
         </div>
@@ -732,39 +735,39 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="mb-6 p-5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200/60 dark:border-zinc-800/50 relative shadow-sm"
+              className={cn("mb-6 p-5 rounded-[24px] border relative shadow-xl transition-all", isDarkMode ? "bg-[#13233F] border-[#ebd29c]/15 text-slate-100" : "bg-[#FFFBF0] border-[#112140]/15 text-[#112140]")}
             >
               <button
                 onClick={dismissGuide}
-                className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+                className={cn("absolute top-4 right-4 transition-colors", isDarkMode ? "text-[#ebd29c]/50 hover:text-[#ebd29c]" : "text-[#112140]/40 hover:text-[#112140]")}
                 title="关闭指南"
               >
                 <X className="w-5 h-5" />
               </button>
               <div className="flex gap-4">
-                <div className="p-3 bg-white dark:bg-zinc-950 rounded-xl text-zinc-700 dark:text-zinc-300 border border-zinc-100 dark:border-zinc-900 shadow-sm h-fit hidden sm:block">
-                  <Info className="w-6 h-6" />
+                <div className={cn("p-3 rounded-xl border shadow-inner shrink-0 hidden sm:block", isDarkMode ? "bg-[#0B132B] border-[#ebd29c]/20 text-[#ebd29c]" : "bg-[#F5ECD7] border-[#112140]/20 text-[#112140]")}>
+                  <Info className="w-6 h-6 animate-bounce" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 mb-2.5 flex items-center gap-1.5">
-                    💡 快速上手指南
+                  <h3 className={cn("text-xs sm:text-sm font-black font-mono tracking-widest uppercase mb-3 flex items-center gap-1.5", isDarkMode ? "text-[#ebd29c]" : "text-[#112140]")}>
+                    ⚙️ ENGINE OPERATING MANUAL / 回话引擎说明书
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs sm:text-sm text-zinc-600 dark:text-zinc-300">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
                     <div className="space-y-1">
-                      <p className="font-semibold text-zinc-900 dark:text-zinc-200">1. 选择或新增场景</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">在左侧栏选择日常、职场或吵架等预置场景，或点击“新增场景”创建你的专属情境。</p>
+                      <p className={cn("font-bold uppercase tracking-wider", isDarkMode ? "text-[#ebd29c]" : "text-[#112140]")}>1. 选定沟通表盘</p>
+                      <p className="opacity-80">在左侧栏挑选日常、职场或吵架等预置情境，如高级制表一样精确对齐沟通底色。</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="font-semibold text-zinc-900 dark:text-zinc-200">2. 快速载入原话</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">点击场景下方的“预置话术”气泡，原话即可自动填入右侧的输入框。</p>
+                      <p className={cn("font-bold uppercase tracking-wider", isDarkMode ? "text-[#ebd29c]" : "text-[#112140]")}>2. 载入对方原话</p>
+                      <p className="opacity-80">点击场景内部的“预置话术”气泡，把沟通细节填装进右侧的工作区中。</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="font-semibold text-zinc-900 dark:text-zinc-200">3. 智能生成回复</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">点击“智能匹配并生成”，系统将推荐「温和」、「高情商」与「简洁」3种风格建议。</p>
+                      <p className={cn("font-bold uppercase tracking-wider", isDarkMode ? "text-[#ebd29c]" : "text-[#112140]")}>3. 齿轮啮合解析</p>
+                      <p className="opacity-80">点击下方金黄色的“匹配并生成”，系统开始打磨「温和」、「高情商」与「简洁」风格。</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="font-semibold text-zinc-900 dark:text-zinc-200">4. 开启多轮对话</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">点击回复下的“采用回复”，将内容存入上下文，即可输入对方的下一轮原话。</p>
+                      <p className={cn("font-bold uppercase tracking-wider", isDarkMode ? "text-[#ebd29c]" : "text-[#112140]")}>4. 运转多轮齿合</p>
+                      <p className="opacity-80">点击满意回复下方的“采用回复”将其压入核心，即可准备应对下一轮博弈。</p>
                     </div>
                   </div>
                 </div>
@@ -775,12 +778,12 @@ export default function Home() {
 
         {/* API Warning if running in Demo Mode */}
         {apiKeyWarning && (
-          <div id="api-warning-banner" className="mb-6 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/10 border border-zinc-200 dark:border-zinc-800 text-xs sm:text-sm text-zinc-800 dark:text-zinc-300 flex items-start gap-3 shadow-sm">
-            <AlertCircle className="w-5 h-5 text-zinc-600 dark:text-zinc-400 shrink-0 mt-0.5" />
+          <div id="api-warning-banner" className={cn("mb-6 p-4 rounded-xl border text-xs sm:text-sm flex items-start gap-3 shadow-md transition-all", isDarkMode ? "bg-[#13233F]/40 border-rose-500/20 text-[#ebd29c]" : "bg-rose-50/50 border-rose-500/10 text-[#112140]")}>
+            <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5 animate-pulse" />
             <div>
-              <p className="font-semibold text-zinc-900 dark:text-zinc-100">⚠️ 演示沙盒模式（未检测到 AGNES_API_KEY）</p>
-              <p className="mt-1 text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                当前运行在离线演示模式，我们通过深度匹配算法为您提供高拟真的本地话术库推荐（同样支持添加话术、多轮对话和自定义场景）。若要启用真实 Agnes AI 智能云端回复，请将您的 API 密钥写入项目根目录下的 <code className="px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-red-500 dark:text-red-400 rounded font-mono">.env</code> 文件的 <code className="font-mono">AGNES_API_KEY</code> 中。
+              <p className="font-extrabold uppercase tracking-widest font-mono">⚠️ OFFLINE LOCAL STANDALONE / 离线打磨模式 (NO API KEY)</p>
+              <p className="mt-1 opacity-80 leading-relaxed text-xs">
+                当前运行在离线高拟真话术精装版。系统采用精密的本地深度匹配算法，依然为您提供场景匹配、多轮对话和自定义场景定制。若要激活云端智能 Agnes AI 实时自动应答，请在项目根目录下 <code className="px-1.5 py-0.5 bg-black/20 text-red-400 rounded font-mono">.env</code> 写入 <code className="font-mono text-rose-400">AGNES_API_KEY</code>。
               </p>
             </div>
           </div>
