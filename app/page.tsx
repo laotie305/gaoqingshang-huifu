@@ -28,7 +28,8 @@ import {
   X,
   Edit3,
   MessageSquare,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { defaultScenarios, Scenario } from "@/lib/scenarios";
@@ -70,6 +71,11 @@ interface ChatSession {
   inputText: string;
   selectedScenarioId: string;
   updatedAt: string;
+  background?: string;
+  partnerRoleType?: string;
+  partnerRoleName?: string;
+  myRoleName?: string;
+  isSetupComplete?: boolean;
 }
 
 export default function Home() {
@@ -80,6 +86,14 @@ export default function Home() {
   const [inputText, setInputText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Background & Character Setup State
+  const [background, setBackground] = useState("");
+  const [partnerRoleType, setPartnerRoleType] = useState(""); // friend, colleague, partner, relative, customer, custom
+  const [partnerRoleName, setPartnerRoleName] = useState("");
+  const [myRoleName, setMyRoleName] = useState("");
+  const [isSetupComplete, setIsSetupComplete] = useState(false);
+  const [isEditingSetup, setIsEditingSetup] = useState(false);
   
   // Suggestion state
   const [suggestions, setSuggestions] = useState<{
@@ -210,7 +224,12 @@ export default function Home() {
           suggestions: null,
           inputText: "",
           selectedScenarioId: "auto",
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          background: "",
+          partnerRoleType: "",
+          partnerRoleName: "",
+          myRoleName: "",
+          isSetupComplete: true
         }];
       } else {
         loadedSessions = [{
@@ -220,7 +239,12 @@ export default function Home() {
           suggestions: null,
           inputText: "",
           selectedScenarioId: "auto",
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          background: "",
+          partnerRoleType: "",
+          partnerRoleName: "",
+          myRoleName: "",
+          isSetupComplete: false
         }];
       }
     }
@@ -232,6 +256,14 @@ export default function Home() {
     setSuggestions(firstSession.suggestions || null);
     setInputText(firstSession.inputText || "");
     setSelectedScenarioId(firstSession.selectedScenarioId || "auto");
+
+    // Set background and role states
+    setBackground(firstSession.background || "");
+    setPartnerRoleType(firstSession.partnerRoleType || "");
+    setPartnerRoleName(firstSession.partnerRoleName || "");
+    setMyRoleName(firstSession.myRoleName || "");
+    setIsSetupComplete(firstSession.isSetupComplete !== undefined ? !!firstSession.isSetupComplete : (firstSession.dialogHistory?.length > 0));
+    setIsEditingSetup(!firstSession.isSetupComplete && firstSession.dialogHistory?.length === 0);
 
     // Check if API key is set by making a silent inquiry to see if Demo Mode is needed
     fetch("/api/chat", {
@@ -272,8 +304,23 @@ export default function Home() {
       const isSuggestionsSame = JSON.stringify(currentSession.suggestions) === JSON.stringify(suggestions);
       const isInputSame = currentSession.inputText === inputText;
       const isScenarioSame = currentSession.selectedScenarioId === selectedScenarioId;
+      const isBackgroundSame = currentSession.background === background;
+      const isPartnerRoleTypeSame = currentSession.partnerRoleType === partnerRoleType;
+      const isPartnerRoleNameSame = currentSession.partnerRoleName === partnerRoleName;
+      const isMyRoleNameSame = currentSession.myRoleName === myRoleName;
+      const isSetupCompleteSame = currentSession.isSetupComplete === isSetupComplete;
       
-      if (isHistorySame && isSuggestionsSame && isInputSame && isScenarioSame) {
+      if (
+        isHistorySame && 
+        isSuggestionsSame && 
+        isInputSame && 
+        isScenarioSame && 
+        isBackgroundSame && 
+        isPartnerRoleTypeSame && 
+        isPartnerRoleNameSame && 
+        isMyRoleNameSame && 
+        isSetupCompleteSame
+      ) {
         return prevSessions;
       }
       
@@ -285,6 +332,8 @@ export default function Home() {
             if (title.length > 15) {
               title = title.substring(0, 15) + "...";
             }
+          } else if (partnerRoleName && (s.title === "全新对话" || s.title.startsWith("全新对话"))) {
+            title = `与【${partnerRoleName}】的对话`;
           }
           return {
             ...s,
@@ -293,6 +342,11 @@ export default function Home() {
             suggestions,
             inputText,
             selectedScenarioId,
+            background,
+            partnerRoleType,
+            partnerRoleName,
+            myRoleName,
+            isSetupComplete,
             updatedAt: new Date().toISOString()
           };
         }
@@ -302,7 +356,7 @@ export default function Home() {
       localStorage.setItem("eq_reply_sessions_v2", JSON.stringify(updated));
       return updated;
     });
-  }, [dialogHistory, suggestions, inputText, selectedScenarioId, activeSessionId, mounted]);
+  }, [dialogHistory, suggestions, inputText, selectedScenarioId, activeSessionId, background, partnerRoleType, partnerRoleName, myRoleName, isSetupComplete, mounted]);
 
   // Session Helper Functions
   const handleSwitchSession = (sessionId: string) => {
@@ -313,6 +367,15 @@ export default function Home() {
       setSuggestions(targetSession.suggestions || null);
       setInputText(targetSession.inputText || "");
       setSelectedScenarioId(targetSession.selectedScenarioId || "auto");
+      
+      // Load setup states
+      setBackground(targetSession.background || "");
+      setPartnerRoleType(targetSession.partnerRoleType || "");
+      setPartnerRoleName(targetSession.partnerRoleName || "");
+      setMyRoleName(targetSession.myRoleName || "");
+      setIsSetupComplete(targetSession.isSetupComplete !== undefined ? !!targetSession.isSetupComplete : (targetSession.dialogHistory?.length > 0));
+      setIsEditingSetup(!targetSession.isSetupComplete && targetSession.dialogHistory?.length === 0);
+      
       setMobileChatViewActive(true); // Switch to chat viewport on mobile viewports
     }
   };
@@ -326,7 +389,12 @@ export default function Home() {
       suggestions: null,
       inputText: "",
       selectedScenarioId: "auto",
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      background: "",
+      partnerRoleType: "",
+      partnerRoleName: "",
+      myRoleName: "",
+      isSetupComplete: false
     };
     
     const updated = [newSession, ...sessions];
@@ -338,6 +406,15 @@ export default function Home() {
     setSuggestions(null);
     setInputText("");
     setSelectedScenarioId("auto");
+    
+    // Clear setup states for new session
+    setBackground("");
+    setPartnerRoleType("");
+    setPartnerRoleName("");
+    setMyRoleName("");
+    setIsSetupComplete(false);
+    setIsEditingSetup(true); // Setup is required first
+    
     setMobileChatViewActive(true); // Automatically open chat screen on mobile
   };
 
@@ -358,7 +435,12 @@ export default function Home() {
             suggestions: null,
             inputText: "",
             selectedScenarioId: "auto",
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            background: "",
+            partnerRoleType: "",
+            partnerRoleName: "",
+            myRoleName: "",
+            isSetupComplete: false
           };
           updated.push(freshSession);
         }
@@ -373,6 +455,13 @@ export default function Home() {
           setSuggestions(nextActive.suggestions || null);
           setInputText(nextActive.inputText || "");
           setSelectedScenarioId(nextActive.selectedScenarioId || "auto");
+          
+          setBackground(nextActive.background || "");
+          setPartnerRoleType(nextActive.partnerRoleType || "");
+          setPartnerRoleName(nextActive.partnerRoleName || "");
+          setMyRoleName(nextActive.myRoleName || "");
+          setIsSetupComplete(!!nextActive.isSetupComplete);
+          setIsEditingSetup(!nextActive.isSetupComplete);
         }
       }
     );
@@ -562,7 +651,11 @@ export default function Home() {
           message: textToUse,
           history: dialogHistory,
           selectedScenario: activeScenario ? activeScenario.name : "自动匹配",
-          customScenarios: customScenarioNames
+          customScenarios: customScenarioNames,
+          background,
+          partnerRoleType,
+          partnerRoleName,
+          myRoleName
         })
       });
 
@@ -1061,6 +1154,13 @@ export default function Home() {
                             key={idx}
                             id={`preset-item-${idx}`}
                             onClick={() => {
+                              if (!isSetupComplete) {
+                                setActiveTab("dialogues");
+                                setMobileChatViewActive(true);
+                                setIsEditingSetup(true);
+                                setErrorMsg("请先设定对方的角色与对话背景描述，然后再载入快捷话术！");
+                                return;
+                              }
                               setInputText(preset);
                               setErrorMsg(null);
                               setActiveTab("dialogues");
@@ -1209,223 +1309,375 @@ export default function Home() {
               返回对话目录
             </button>
             
-            {/* Dialogue History Container */}
-            <div id="chat-context-card" className="bg-white dark:bg-[#121214] rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 p-5 shadow-sm flex flex-col min-h-[380px] justify-between">
-              
-              {/* Card Header */}
+            {/* Dialogue Background & Role Setup Card */}
+            <div id="role-background-setup-card" className="bg-white dark:bg-[#121214] rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-zinc-150 dark:border-zinc-850">
                 <div className="flex items-center space-x-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                  <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-50">多轮对话上下文记录</span>
-                  {dialogHistory.length > 0 && (
-                    <span className="text-[10px] px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-full font-mono">
-                      {dialogHistory.length} 轮对话
-                    </span>
-                  )}
+                  <div className="p-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-lg">
+                    <User className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-50">
+                      🎭 1. 角色与背景设定
+                    </h3>
+                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">
+                      确定沟通身份与对话底色，获得极精准高情商话术
+                    </p>
+                  </div>
                 </div>
-                {dialogHistory.length > 0 && (
+                {isSetupComplete && !isEditingSetup && (
                   <button
-                    onClick={handleClearHistory}
-                    className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 dark:hover:text-red-400 transition-colors hover:underline"
-                    title="清空对话"
+                    onClick={() => setIsEditingSetup(true)}
+                    className="text-xs font-semibold text-violet-600 dark:text-violet-400 hover:underline inline-flex items-center gap-1"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    清空并开启新对话
+                    ✏️ 修改设定
                   </button>
                 )}
               </div>
 
-              {/* Chat Viewport */}
-              <div id="chat-viewport" className="flex-1 overflow-y-auto py-4 space-y-4 max-h-[450px] min-h-[220px]">
-                {dialogHistory.length === 0 ? (
-                  /* Empty state welcome card */
-                  <div id="empty-chat-state" className="h-full flex flex-col items-center justify-center text-center py-6 px-4 space-y-4">
-                    <div className="p-4 rounded-full bg-zinc-50 dark:bg-zinc-900 text-zinc-500">
-                      <MessageCircle className="w-10 h-10 animate-bounce" />
-                    </div>
-                    <div className="max-w-md space-y-1">
-                      <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">开始您的第一轮高情商对话</p>
-                      <p className="text-xs text-zinc-400 dark:text-zinc-500 leading-relaxed">
-                        您可以在左侧选择场景，点击预置话术，或直接在下方输入框中输入对方的原话，AI 会针对场景快速为您调配 3 种不同姿态的优秀回复。
-                      </p>
-                    </div>
-                    {/* Quick Start Buttons */}
-                    <div className="flex flex-wrap gap-2 justify-center pt-2 max-w-lg">
-                      <button
-                        onClick={() => {
-                          setSelectedScenarioId("daily");
-                          setInputText("在干嘛呢？");
-                          handleGenerate("在干嘛呢？");
-                        }}
-                        className="px-3 py-1.5 rounded-full text-xs border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-all duration-200"
-                      >
-                        👋 日常闲聊: &quot;在干嘛呢？&quot;
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedScenarioId("workplace");
-                          setInputText("周末来加个班，大家都在呢。");
-                          handleGenerate("周末来加个班，大家都在呢。");
-                        }}
-                        className="px-3 py-1.5 rounded-full text-xs border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-all duration-200"
-                      >
-                        💼 拒绝周末加班
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedScenarioId("fight_mitigation");
-                          setInputText("都是我的错行了吧！");
-                          handleGenerate("都是我的错行了吧！");
-                        }}
-                        className="px-3 py-1.5 rounded-full text-xs border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-all duration-200"
-                      >
-                        🔥 缓和争吵尴尬
-                      </button>
+              {(!isSetupComplete || isEditingSetup) ? (
+                <div className="space-y-4 animate-fadeIn">
+                  {/* Role Type Buttons */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">对方角色分类</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {[
+                        { type: "colleague", label: "💼 职场同事", defaultName: "领导" },
+                        { type: "partner", label: "❤️ 恋爱伴侣", defaultName: "宝贝" },
+                        { type: "relative", label: "🏡 催婚亲戚", defaultName: "长辈" },
+                        { type: "friend", label: "👥 日常朋友", defaultName: "朋友" },
+                        { type: "customer", label: "🛒 刁钻客户", defaultName: "客户" },
+                        { type: "custom", label: "🎭 其它自定义", defaultName: "对方" }
+                      ].map((item) => (
+                        <button
+                          key={item.type}
+                          type="button"
+                          onClick={() => {
+                            setPartnerRoleType(item.type);
+                            setPartnerRoleName(item.defaultName);
+                          }}
+                          className={cn(
+                            "py-2 px-3 rounded-xl border text-xs font-medium transition-all text-center",
+                            partnerRoleType === item.type
+                              ? "bg-violet-50 dark:bg-violet-950/20 border-violet-300 dark:border-violet-750 text-violet-700 dark:text-violet-300 font-semibold"
+                              : "border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/10 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 text-zinc-600 dark:text-zinc-400"
+                          )}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                ) : (
-                  /* Dialogue messages rendering */
-                  <div id="dialog-history-list" className="space-y-4 px-1">
-                    {dialogHistory.map((turn, index) => {
-                      const styleLabel =
-                        turn.style === "gentle"
-                          ? "🌸 温和风格"
-                          : turn.style === "high_eq"
-                          ? "🔮 高情商风格"
-                          : turn.style === "concise"
-                          ? "⚡ 简洁风格"
-                          : "✏️ 修改自定义";
 
-                      const styleBg =
-                        turn.style === "gentle"
-                          ? "bg-rose-50/60 dark:bg-rose-950/10 text-rose-950 dark:text-rose-200 border-rose-100/50 dark:border-rose-950/30"
-                          : turn.style === "high_eq"
-                          ? "bg-violet-50/60 dark:bg-violet-950/10 text-violet-950 dark:text-violet-200 border-violet-100/50 dark:border-violet-950/30"
-                          : turn.style === "concise"
-                          ? "bg-zinc-50 dark:bg-zinc-900/40 text-zinc-900 dark:text-zinc-200 border-zinc-150 dark:border-zinc-800/40"
-                          : "bg-zinc-100 dark:bg-zinc-900/60 text-zinc-900 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800/40";
-
-                      return (
-                        <div key={turn.id} className="space-y-3">
-                          {/* Round Header */}
-                          <div className="flex items-center justify-between border-b border-dashed border-zinc-100 dark:border-zinc-800 pb-1.5">
-                            <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-2.5 py-0.5 rounded-full font-mono">
-                              第 {index + 1} 轮对话 • {turn.scenario}
-                            </span>
-                            <button
-                              onClick={() => handleDeleteTurn(turn.id)}
-                              className="text-zinc-400 hover:text-red-500 dark:hover:text-red-400 p-1 rounded-md transition-colors"
-                              title="删除此轮记录"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-
-                          {/* Partner's Word bubble (Left) */}
-                          <div className="flex items-start space-x-2.5 max-w-[85%]">
-                            <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 flex items-center justify-center shrink-0 border border-zinc-200 dark:border-zinc-700 font-bold text-xs">
-                              <User className="w-4 h-4" />
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-[10px] text-zinc-400 font-semibold pl-1">对方说</p>
-                              <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/55 px-3.5 py-2.5 rounded-2xl rounded-tl-none text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed">
-                                {turn.partner}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* My Reply bubble (Right) */}
-                          <div className="flex items-start justify-end space-x-2.5 ml-auto max-w-[85%] text-right">
-                            <div className="space-y-1 text-right">
-                              <p className="text-[10px] text-zinc-400 font-semibold pr-1">
-                                我 ({styleLabel})
-                              </p>
-                              <div className={cn("px-3.5 py-2.5 rounded-2xl rounded-tr-none text-xs sm:text-sm text-left leading-relaxed border", styleBg)}>
-                                {turn.reply}
-                              </div>
-                            </div>
-                            <div className="w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center shrink-0 font-bold text-xs">
-                              <Bot className="w-4 h-4" />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  {/* Character Names Inputs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">对方具体称呼 / 身份</label>
+                      <input
+                        type="text"
+                        placeholder="例如：直属领导、老妈、女朋友、刁难客户等"
+                        value={partnerRoleName}
+                        onChange={(e) => setPartnerRoleName(e.target.value)}
+                        className="w-full text-xs p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-[#0c0c0e] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">我的具体身份</label>
+                      <input
+                        type="text"
+                        placeholder="例如：下属、儿女、男朋友、项目经理等"
+                        value={myRoleName}
+                        onChange={(e) => setMyRoleName(e.target.value)}
+                        className="w-full text-xs p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-[#0c0c0e] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                      />
+                    </div>
                   </div>
-                )}
-                {/* Visual Anchor for Scrolling */}
-                <div ref={historyEndRef} />
-              </div>
 
-              {/* Partner Input Form Box */}
-              <div id="chat-input-area" className="border-t border-zinc-150 dark:border-zinc-850 pt-4 mt-2">
-                <div className="relative">
-                  <textarea
-                    id="chat-textarea-input"
-                    rows={3}
-                    placeholder={
-                      selectedScenarioId !== "auto" && activeScenario
-                        ? `请输入在此【${activeScenario.name}】场景下对方发来的原话（或点击左侧预置快捷话术）...`
-                        : "请输入对方的原话，AI 会自动为您匹配最合适的对话场景..."
-                    }
-                    value={inputText}
-                    onChange={(e) => {
-                      setInputText(e.target.value);
-                      if (errorMsg) setErrorMsg(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleGenerate();
-                      }
-                    }}
-                    className="w-full text-xs sm:text-sm p-3.5 pb-12 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-[#0c0c0e] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:border-zinc-450 transition-all resize-none placeholder-zinc-400"
-                  />
+                  {/* Background Description Textarea */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">对话背景描述</label>
+                    <textarea
+                      rows={2}
+                      placeholder="请描述对话发生时的具体背景，如：“下班前领导在群里临时加塞紧急报告，而我还有别的事要做” 或 “微信上突然被长辈问起年终奖”"
+                      value={background}
+                      onChange={(e) => setBackground(e.target.value)}
+                      className="w-full text-xs p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/30 dark:bg-[#0c0c0e] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400 placeholder-zinc-400/80"
+                    />
+                  </div>
 
-                  {/* Character counts & Clear text & Action button in textarea */}
-                  <div className="absolute bottom-2.5 left-3 flex items-center space-x-2">
-                    {inputText && (
+                  {/* Action Buttons */}
+                  <div className="flex justify-end gap-2 pt-1 border-t border-zinc-100 dark:border-zinc-850">
+                    {isSetupComplete && (
                       <button
-                        id="clear-input-btn"
-                        onClick={() => setInputText("")}
-                        className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                        title="清空内容"
+                        type="button"
+                        onClick={() => setIsEditingSetup(false)}
+                        className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        取消修改
                       </button>
                     )}
-                    <span id="char-counter" className="text-[10px] text-zinc-400 font-mono font-medium">
-                      {inputText.length} 字
-                    </span>
-                  </div>
-
-                  <div className="absolute bottom-2.5 right-3">
                     <button
-                      id="generate-suggestion-btn"
-                      onClick={() => handleGenerate()}
-                      disabled={isGenerating || !inputText.trim()}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200",
-                        inputText.trim()
-                          ? "bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 active:scale-95 cursor-pointer shadow-sm"
-                          : "bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
-                      )}
+                      type="button"
+                      onClick={() => {
+                        if (!partnerRoleName.trim()) {
+                          setErrorMsg("请填写对方具体称呼 / 身份");
+                          return;
+                        }
+                        if (!background.trim()) {
+                          setErrorMsg("请填写对话背景描述");
+                          return;
+                        }
+                        setErrorMsg(null);
+                        setIsSetupComplete(true);
+                        setIsEditingSetup(false);
+                      }}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-violet-600 hover:bg-violet-700 text-white shadow-sm transition-colors"
                     >
-                      {isGenerating ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          匹配中...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-3.5 h-3.5" />
-                          智能匹配并生成建议
-                        </>
-                      )}
+                      保存设定，进入对话 🔓
                     </button>
                   </div>
                 </div>
+              ) : (
+                <div className="bg-zinc-50 dark:bg-zinc-900/35 border border-zinc-150 dark:border-zinc-800/60 rounded-xl p-3 text-xs text-zinc-600 dark:text-zinc-400 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                  <div className="space-y-1">
+                    <p className="font-bold text-zinc-800 dark:text-zinc-200 flex items-center flex-wrap gap-1.5">
+                      <span>👥 对方：<span className="text-violet-600 dark:text-violet-400">{partnerRoleName || "对方"}</span></span>
+                      {partnerRoleType && (
+                        <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full text-zinc-500">
+                          {partnerRoleType === "colleague" && "职场同事"}
+                          {partnerRoleType === "partner" && "恋爱伴侣"}
+                          {partnerRoleType === "relative" && "催婚亲戚"}
+                          {partnerRoleType === "friend" && "日常朋友"}
+                          {partnerRoleType === "customer" && "刁钻客户"}
+                          {partnerRoleType === "custom" && "其它自定义"}
+                        </span>
+                      )}
+                      {myRoleName && <span>| 我的身份：<span className="text-zinc-850 dark:text-zinc-100 font-semibold">{myRoleName}</span></span>}
+                    </p>
+                    {background && (
+                      <p className="text-[11px] text-zinc-450 dark:text-zinc-500 line-clamp-1">
+                        🎬 背景：{background}
+                      </p>
+                    )}
+                  </div>
+                  <div className="shrink-0 flex items-center gap-1 text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-full font-bold">
+                    <Check className="w-3.5 h-3.5" />
+                    已锁定底色
+                  </div>
+                </div>
+              )}
+            </div>
 
+            {/* Dialogue History Container / Setup Lock Placeholder */}
+            {isSetupComplete ? (
+              <div id="chat-context-card" className="bg-white dark:bg-[#121214] rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 p-5 shadow-sm flex flex-col min-h-[380px] justify-between">
+                
+                {/* Card Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-zinc-150 dark:border-zinc-850">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-50">多轮对话上下文记录</span>
+                    {dialogHistory.length > 0 && (
+                      <span className="text-[10px] px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 rounded-full font-mono">
+                        {dialogHistory.length} 轮对话
+                      </span>
+                    )}
+                  </div>
+                  {dialogHistory.length > 0 && (
+                    <button
+                      onClick={handleClearHistory}
+                      className="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 dark:hover:text-red-400 transition-colors hover:underline"
+                      title="清空对话"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      清空并开启新对话
+                    </button>
+                  )}
+                </div>
+
+                {/* Chat Viewport */}
+                <div id="chat-viewport" className="flex-1 overflow-y-auto py-4 space-y-4 max-h-[450px] min-h-[220px]">
+                  {dialogHistory.length === 0 ? (
+                    /* Empty state welcome card */
+                    <div id="empty-chat-state" className="h-full flex flex-col items-center justify-center text-center py-6 px-4 space-y-4">
+                      <div className="p-4 rounded-full bg-zinc-50 dark:bg-zinc-900 text-zinc-500">
+                        <MessageCircle className="w-10 h-10 animate-bounce" />
+                      </div>
+                      <div className="max-w-md space-y-1">
+                        <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">开始您的第一轮高情商对话</p>
+                        <p className="text-xs text-zinc-400 dark:text-zinc-500 leading-relaxed">
+                          当前沟通的角色与背景设定已就绪。在下方输入框中输入对方发给您的原话，系统会为您定制出 3 种极具沟通智慧的优质回复。
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Dialogue messages rendering */
+                    <div id="dialog-history-list" className="space-y-4 px-1">
+                      {dialogHistory.map((turn, index) => {
+                        const styleLabel =
+                          turn.style === "gentle"
+                            ? "🌸 温和风格"
+                            : turn.style === "high_eq"
+                            ? "🔮 高情商风格"
+                            : turn.style === "concise"
+                            ? "⚡ 简洁风格"
+                            : "✏️ 修改自定义";
+
+                        const styleBg =
+                          turn.style === "gentle"
+                            ? "bg-rose-50/60 dark:bg-rose-950/10 text-rose-950 dark:text-rose-200 border-rose-100/50 dark:border-rose-950/30"
+                            : turn.style === "high_eq"
+                            ? "bg-violet-50/60 dark:bg-violet-950/10 text-violet-950 dark:text-violet-200 border-violet-100/50 dark:border-violet-950/30"
+                            : turn.style === "concise"
+                            ? "bg-zinc-50 dark:bg-zinc-900/40 text-zinc-900 dark:text-zinc-200 border-zinc-150 dark:border-zinc-800/40"
+                            : "bg-zinc-100 dark:bg-zinc-900/60 text-zinc-900 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800/40";
+
+                        return (
+                          <div key={turn.id} className="space-y-3">
+                            {/* Round Header */}
+                            <div className="flex items-center justify-between border-b border-dashed border-zinc-100 dark:border-zinc-800 pb-1.5">
+                              <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-2.5 py-0.5 rounded-full font-mono">
+                                第 {index + 1} 轮对话 • {turn.scenario}
+                              </span>
+                              <button
+                                onClick={() => handleDeleteTurn(turn.id)}
+                                className="text-zinc-400 hover:text-red-500 dark:hover:text-red-400 p-1 rounded-md transition-colors"
+                                title="删除此轮记录"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            {/* Partner's Word bubble (Left) */}
+                            <div className="flex items-start space-x-2.5 max-w-[85%]">
+                              <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 flex items-center justify-center shrink-0 border border-zinc-200 dark:border-zinc-700 font-bold text-xs">
+                                <User className="w-4 h-4" />
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-[10px] text-zinc-400 font-semibold pl-1">【{partnerRoleName || "对方"}】说</p>
+                                <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/55 px-3.5 py-2.5 rounded-2xl rounded-tl-none text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed">
+                                  {turn.partner}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* My Reply bubble (Right) */}
+                            <div className="flex items-start justify-end space-x-2.5 ml-auto max-w-[85%] text-right">
+                              <div className="space-y-1 text-right">
+                                <p className="text-[10px] text-zinc-400 font-semibold pr-1">
+                                  【{myRoleName || "我"}】 ({styleLabel})
+                                </p>
+                                <div className={cn("px-3.5 py-2.5 rounded-2xl rounded-tr-none text-xs sm:text-sm text-left leading-relaxed border", styleBg)}>
+                                  {turn.reply}
+                                </div>
+                              </div>
+                              <div className="w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center shrink-0 font-bold text-xs">
+                                <Bot className="w-4 h-4" />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* Visual Anchor for Scrolling */}
+                  <div ref={historyEndRef} />
+                </div>
+
+                {/* Partner Input Form Box */}
+                <div id="chat-input-area" className="border-t border-zinc-150 dark:border-zinc-850 pt-4 mt-2">
+                  <div className="relative">
+                    <textarea
+                      id="chat-textarea-input"
+                      rows={3}
+                      placeholder={
+                        selectedScenarioId !== "auto" && activeScenario
+                          ? `请输入在此【${activeScenario.name}】场景下【${partnerRoleName || "对方"}】发来的原话...`
+                          : `请输入【${partnerRoleName || "对方"}】发来的原话，AI 会自动为您匹配并生成高情商回复...`
+                      }
+                      value={inputText}
+                      onChange={(e) => {
+                        setInputText(e.target.value);
+                        if (errorMsg) setErrorMsg(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleGenerate();
+                        }
+                      }}
+                      className="w-full text-xs sm:text-sm p-3.5 pb-12 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-[#0c0c0e] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:border-zinc-450 transition-all resize-none placeholder-zinc-400"
+                    />
+
+                    {/* Character counts & Clear text & Action button in textarea */}
+                    <div className="absolute bottom-2.5 left-3 flex items-center space-x-2">
+                      {inputText && (
+                        <button
+                          id="clear-input-btn"
+                          onClick={() => setInputText("")}
+                          className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                          title="清空内容"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <span id="char-counter" className="text-[10px] text-zinc-400 font-mono font-medium">
+                        {inputText.length} 字
+                      </span>
+                    </div>
+
+                    <div className="absolute bottom-2.5 right-3">
+                      <button
+                        id="generate-suggestion-btn"
+                        onClick={() => handleGenerate()}
+                        disabled={isGenerating || !inputText.trim()}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200",
+                          inputText.trim()
+                            ? "bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 active:scale-95 cursor-pointer shadow-sm"
+                            : "bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-600 cursor-not-allowed"
+                        )}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            匹配中...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5" />
+                            智能匹配并生成建议
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {errorMsg && (
+                    <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {errorMsg}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Setup Lock Placeholder screen */
+              <div id="chat-setup-lock-card" className="bg-white dark:bg-[#121214] rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 p-8 shadow-sm flex flex-col items-center justify-center text-center min-h-[380px] space-y-4">
+                <div className="p-4 rounded-full bg-zinc-50 dark:bg-zinc-900 text-zinc-400 border border-zinc-100 dark:border-zinc-850 relative">
+                  <Lock className="w-8 h-8 text-violet-500 animate-pulse" />
+                </div>
+                <div className="max-w-md space-y-2">
+                  <h3 className="text-sm sm:text-base font-bold text-zinc-800 dark:text-zinc-200">
+                    🔒 智能回话区暂未解锁
+                  </h3>
+                  <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    为了帮您生成最得体、最具情绪博弈精度的高情商话术，我们需要先确定沟通的【背景描述】与【角色身份设定】。
+                  </p>
+                  <p className="text-xs text-violet-600 dark:text-violet-400 font-semibold animate-pulse">
+                    👇 请在上方完成 “1. 角色与背景设定” 后，即可解锁此区域输入内容！
+                  </p>
+                </div>
                 {errorMsg && (
                   <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5" />
@@ -1433,7 +1685,7 @@ export default function Home() {
                   </p>
                 )}
               </div>
-            </div>
+            )}
 
             {/* Generated Suggestions Output panel */}
             <AnimatePresence>
@@ -1766,7 +2018,6 @@ export default function Home() {
       <footer id="app-footer" className="mt-12 py-8 border-t border-zinc-200/50 dark:border-zinc-800/50 bg-white/40 dark:bg-zinc-950/40 text-center text-xs text-zinc-400 dark:text-zinc-500">
         <div className="max-w-7xl mx-auto px-4 space-y-2">
           <p>高情商场景回话助手 - 运用沟通心理学的高拟真语义匹配系统</p>
-          <p className="font-mono text-[10px]">Model: agnes-2.0-flash @ https://apihub.agnes-ai.com/v1</p>
         </div>
       </footer>
 
